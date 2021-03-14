@@ -2,8 +2,8 @@
 
 # This python script takes in an nd2 file, gets the metadata, loops through all possible images and writes each image to a fits file.
 
-#To run from python command line, syntax is:
-# python extract_fits_from_nd2_general.py /blue/eiken/Tcell_Motility/test.nd2
+#To run from the python command line, the syntax is:
+# python extract_fits_from_nd2.py /path/to/test.nd2
 
 import numpy as np
 from nd2reader import ND2Reader
@@ -13,37 +13,23 @@ import sys
 
 #if the fits file does not already exist, write it to the file. Otherwise, skip it.
 def write_fits(path,name,image):
+    
     if os.path.isfile(path+name)==False:
         fits.writeto(path+name,image)
         print( 'Written: ',path+name)
-        to_continue=False
+        
     else:
         print('File already exists- ',path+name)
-        to_continue=True
         
-    return to_continue
+    return 
 
-# def rebin(a, shape):
-#     sh = shape[0],a.shape[0]//shape[0],shape[1],a.shape[1]//shape[1]
-#     return a.reshape(sh).mean(-1).mean(1)
 
-# def image_zsmooth2(imstack1):
-#     imstack2 = np.zeros(imstack1.shape)
-#     for i in range(imstack2.shape[2]-1):
-#         imstack2[:,:,i] = (imstack1[:,:,i] + imstack1[:,:,i+1])/2.0
-        
-#     imstack2[:,:,imstack2.shape[2]-1] = imstack2[:,:,imstack2.shape[2]-2]
-    
-#     return imstack2
-
-#full_path='/blue/eiken/Tcell_Motility/test.nd2'
+#full_path='/path/to/test.nd2'
 full_path=sys.argv[1] 
-# print('full path',full_path)
 
 split_str=full_path.split('/')
-# print('Split_str',split_str)
 
-#path='/blue/eiken/Tcell_Motility'
+#path='/path/to'
 path=full_path[:-1*len(split_str[-1])]
 print('path',path)
 
@@ -55,7 +41,7 @@ print('name',name)
 pre=name[:-4]
 print('pre',pre)
 
-#folder='/blue/eiken/Tcell_Motility/test/'
+#folder='/path/to/test/'
 folder=path+pre+'/'
 
 #if there is not already a folder corresponding to this nd2 file, create one
@@ -95,7 +81,7 @@ with ND2Reader(path+name) as images:
     
     #iterate over time or z_level depending on how the data were taken; not sure if this actually does anything since I loop over both later anyways
     
-    if len(z_levels)==0:# and n_frames!=0:
+    if len(z_levels)==0:#
         print('Iterating over t')
         images.iter_axes='t'
     else:
@@ -103,15 +89,18 @@ with ND2Reader(path+name) as images:
         images.iter_axes='z'
 
     #loop through all channels, fields of view, time slices and z_levels
-
     for c in range(len(channels)):
+        
         #if there is only one channel, code breaks if you try to set default_coords
         if len(channels)>1:
             images.default_coords['c']=c
+        
         for v in fov:
-            #same for fields of view
+            
+            #if there is only one field of view, code breaks if you try to set default_coords
             if len(fov)>1:
                 images.default_coords['v']=v
+                
             for t in n_frames:
                 images.default_coords['t']=t
                 
@@ -124,42 +113,12 @@ with ND2Reader(path+name) as images:
                         
                         base=pre+'_'+channels[c]+'_fov'+str(v)+'_t'+str(t)+'_z'+str(z)
                         fits_name=base+'.fits'
-                        to_continue=write_fits(fits_folder,fits_name,images[z]*1.0)
+                        write_fits(fits_folder,fits_name,images[z]*1.0)
                         
-#                         sep_name=base+'_SEP.fits'
-#                         bin_name=base+'_binned_SEP.fits'
-                        #sometimes background in an image is very low so add minimum noise for source extractor to latch onto
-                        #so we can still use a reasonable threshold.
-                        #NOTE: These images should ONLY be used for source extractor. Use the normal fits file for everything else.
-#                         shape=images[z].shape
-#                         noise=np.random.rand(shape[0], shape[1])*2.
-#                         sep_arr=images[z]*1.0+noise
-#                         to_continue=write_fits(sep_folder,sep_name,sep_arr)
-                               
-#                         imf[:,:,z]=images[z]*1.0
-#                         im_bin[:,:,z] = rebin(imf[:,:,z],[256,256])
-
-#                     #binning and smoothing images to increase S/N
-#                     im_smooth = image_zsmooth2(im_bin)
-#                     for zi in range(im_smooth.shape[2]):
-#                         bin_name=pre+'_'+channels[c]+'_fov'+str(v)+'_t'+str(t)+'_z'+str(zi)+'_binned_SEP.fits'
-#                         to_continue=write_fits(bin_folder,bin_name,im_smooth[:,:,zi])
-    
                 # Otherwise, just write out the image.            
                 else:
                     
-#                     sep_name=pre+'_'+channels[c]+'_fov'+str(v)+'_t'+str(t)+'_SEP.fits'
-                    fits_name=pre+'_'+channels[c]+'_fov'+str(v)+'_t'+str(t)+'.fits'
-                    
-                    to_continue=write_fits(fits_folder,fits_name,images[t]*1.0)
-                    if to_continue==True:
-                        pass
-                        
-#                     shape=images[t].shape
-#                     noise=np.random.rand(shape[0], shape[1])*2.
-#                     sep_arr=images[t]*1.0+noise
-                        
-#                     to_continue=write_fits(sep_folder,sep_name,sep_arr)
-#                     if to_continue==True:
-#                         continue
+                    fits_name=pre+'_'+channels[c]+'_fov'+str(v)+'_t'+str(t)+'.fits'                    
+                    write_fits(fits_folder,fits_name,images[t]*1.0)
+
 
